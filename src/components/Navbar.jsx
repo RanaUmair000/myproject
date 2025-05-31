@@ -1,87 +1,114 @@
-import React from 'react';
+import Loading from './Loading';
+import NewsItem from './NewsItem';
 import PropTypes from 'prop-types';
-import { Link } from 'react-router-dom';
+import InfiniteScroll from 'react-infinite-scroll-component';
+import { useState, useEffect } from 'react';
 
-export default function Navbar(props) {
-  return (
-    <nav className={`navbar navbar-expand-lg navbar-${props.mode} bg-${props.mode}`}>
-      <div className="container-fluid">
-        <a className="navbar-brand" href="#">{props.title}</a>
-        <button
-          className="navbar-toggler"
-          type="button"
-          data-bs-toggle="collapse"
-          data-bs-target="#navbarSupportedContent"
-          aria-controls="navbarSupportedContent"
-          aria-expanded="false"
-          aria-label="Toggle navigation"
-        >
-          <span className="navbar-toggler-icon"></span>
-        </button>
+const News = (props) => {
+    const capitalize = (text) => {
+        if (!text) return '';
+        return text.charAt(0).toUpperCase() + text.slice(1);
+    };
 
-        <div className="collapse navbar-collapse" id="navbarSupportedContent">
-          <ul className="navbar-nav me-auto mb-2 mb-lg-0">
-            <li className="nav-item">
-              <Link className="nav-link active" aria-current="page" to="/">Home</Link>
-            </li>
-            <li className="nav-item">
-              <Link className="nav-link" to="/about">About</Link>
-            </li>
-            <li className="nav-item dropdown">
-              <a
-                className="nav-link dropdown-toggle"
-                href="#"
-                id="navbarDropdown"
-                role="button"
-                data-bs-toggle="dropdown"
-                aria-expanded="false"
-              >
-                Dropdown
-              </a>
-              <ul className="dropdown-menu" aria-labelledby="navbarDropdown">
-                <li><a className="dropdown-item" href="#">Action</a></li>
-                <li><a className="dropdown-item" href="#">Another action</a></li>
-                <li><hr className="dropdown-divider" /></li>
-                <li><a className="dropdown-item" href="#">Something else here</a></li>
-              </ul>
-            </li>
-            <li className="nav-item">
-              <a className="nav-link disabled" href="#" tabIndex="-1" aria-disabled="true">Disabled</a>
-            </li>
-          </ul>
-          {/* <form className="d-flex">
-            <input className="form-control me-2" type="search" placeholder="Search" aria-label="Search" />
-            <button className="btn btn-outline-success" type="submit">Search</button>
-          </form> */}
-          {props.isDark === true ? (
-            <div className="d-flex align-items-center gap-2 mx-3">
-              <div
-                className="bg-danger rounded-circle"
-                onClick={() => props.showModeColor('#dc3545')}
-                style={{ height: '25px', width: '25px', cursor: 'pointer' }}
-              ></div>
-              <div
-                className="bg-success rounded-circle"
-                onClick={() => props.showModeColor('#198754')}
-                style={{ height: '25px', width: '25px', cursor: 'pointer' }}
-              ></div>
-              <div
-                className="bg-warning rounded-circle"
-                onClick={() => props.showModeColor('#ffc107')}
-                style={{ height: '25px', width: '25px', cursor: 'pointer' }}
-              ></div>
-            </div>
-          ) : null}
-          <div className="form-check form-switch">
-            <input className="form-check-input" type="checkbox" onClick={props.toggleMode} id="flexSwitchCheckDefault"/>
-            <label className={`form-check-label text-${props.mode === 'light' ? 'dark' : 'light'}`} htmlFor="flexSwitchCheckDefault">{props.modeText}</label>
-          </div>
+    const [articles, setArticles] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [page, setPage] = useState(1);
+    const [totalResults, setTotalResults] = useState(0);
+    const [hasMore, setHasMore] = useState(true);
+
+    const updateData = async () => {
+        props.setProgress(10);
+        const url = `https://newsapi.org/v2/top-headlines?country=${props.country}&category=${props.category}&apiKey=${props.apiKey}&page=1&pageSize=${props.pageSize}`;
+        setLoading(true);
+        const data = await fetch(url);
+        props.setProgress(30);
+        const parsedData = await data.json();
+        props.setProgress(70);
+        setArticles(parsedData.articles);
+        setLoading(false);
+        setTotalResults(parsedData.totalResults);
+        props.setProgress(100);
+    };
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    useEffect(() => {
+        updateData();
+    }, []);
+
+    const fetchData = async () => {
+        const nextPage = page + 1;
+        const url = `https://newsapi.org/v2/top-headlines?country=${props.country}&category=${props.category}&apiKey=${props.apiKey}&page=${nextPage}&pageSize=${props.pageSize}`;
+        const data = await fetch(url);
+        const parsedData = await data.json();
+
+        setArticles((prevArticles) => {
+            const newArticles = prevArticles.concat(parsedData.articles);
+            if (newArticles.length >= parsedData.totalResults) {
+                setHasMore(false);
+            }
+            return newArticles;
+        });
+
+        setPage(nextPage);
+        setTotalResults(parsedData.totalResults);
+    };
+
+    return (
+        <div className='container mt-4'>
+            <h1 className='text-center my-3'>
+                NewsMonkey - Top {capitalize(props.category)} Headlines
+            </h1>
+
+            {loading && <Loading />}
+
+            {!loading && (
+                <InfiniteScroll
+                    dataLength={articles.length}
+                    next={fetchData}
+                    hasMore={hasMore}
+                    loader={<Loading />}
+                >
+                    <div className='container'>
+                        <div className='row my-3'>
+                            {articles.map((element) => (
+                                <div className='col-md-4 mt-3' key={element.url}>
+                                    <NewsItem
+                                        title={element.title ? element.title.slice(0, 40) : ''}
+                                        description={
+                                            element.description
+                                                ? element.description.length > 88
+                                                    ? element.description.slice(0, 88) + '...'
+                                                    : element.description
+                                                : ''
+                                        }
+                                        imageUrl={element.urlToImage}
+                                        newsUrl={element.url}
+                                        date={element.publishedAt}
+                                        author={element.author}
+                                        source={element.source.name}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </InfiniteScroll>
+            )}
         </div>
-      </div>
-    </nav>
-  );
-}
+    );
+};
 
-Navbar.propTypes = {title: PropTypes.string};
+News.defaultProps = {
+    country: 'us',
+    pageSize: 2,
+    category: 'health'
+};
 
-Navbar.defaultProps = {title: "Mineing"};
+News.propTypes = {
+    country: PropTypes.string,
+    pageSize: PropTypes.number,
+    category: PropTypes.string,
+    apiKey: PropTypes.string.isRequired,
+    setProgress: PropTypes.func.isRequired
+};
+
+export default News;
