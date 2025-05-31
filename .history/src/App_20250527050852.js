@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import About from './components/About';
 import Alert from './components/Alert';
 import Navbar from './components/Navbar';
