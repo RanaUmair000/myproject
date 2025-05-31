@@ -56,7 +56,7 @@ function App() {
       <Router>
         <Navbar showModeColor={showModeColor} isDark={mode === 'dark' ? true : false} modeText={modeText} mode={mode} toggleMode={toggleMode}/>
         <Alert alert={alert} />
-        <h1 className='my-4 text-center'>TextUtills - Opertations on Text</h1>
+        <h1>TextUtills</h1>
         <Routes>
           <Route path="/" element={<TextInput showAlert={showAlert} inputHead="Enter Text" />} />
           <Route path="/about" element={<About />} />
